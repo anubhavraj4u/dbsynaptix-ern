@@ -1,0 +1,31 @@
+// Python original: app/routers/database.py
+//
+// A Router is a mini-app that groups related URLs. app.js mounts this one
+// under "/database", so router.post("/connect") answers POST /database/connect.
+//
+// Python:  @router.post("/connect")
+//          def connect_database(request: DatabaseConnectionRequest): ...
+// Node:    router.post("/connect", async (req, res) => { ... })
+//
+// (req, res) = the request coming in and the response going out.
+import { Router } from "express";
+import { DatabaseService } from "../services/databaseService.js";
+import { validateConnectionRequest } from "../utils/validate.js";
+
+export const databaseRouter = Router();
+
+databaseRouter.post("/connect", async (req, res) => {
+  const request = validateConnectionRequest(req.body);
+  const service = new DatabaseService();
+
+  res.json(await service.connect(request));
+});
+
+databaseRouter.post("/schema", async (req, res) => {
+  const request = validateConnectionRequest(req.body);
+  const service = new DatabaseService();
+
+  res.json(await service.getSchema(request));
+});
+
+// POST /database/index is added in Stage 2 (indexing).
