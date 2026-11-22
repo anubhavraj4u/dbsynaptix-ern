@@ -10,6 +10,8 @@
 // (req, res) = the request coming in and the response going out.
 import { Router } from "express";
 import { DatabaseService } from "../services/databaseService.js";
+import { IndexingService } from "../services/indexingService.js";
+import { apiResponse } from "../utils/apiResponse.js";
 import { validateConnectionRequest } from "../utils/validate.js";
 
 export const databaseRouter = Router();
@@ -28,4 +30,29 @@ databaseRouter.post("/schema", async (req, res) => {
   res.json(await service.getSchema(request));
 });
 
-// POST /database/index is added in Stage 2 (indexing).
+// POST /database/index: the slow, one-time step. If this database was already
+// indexed, the saved index is reused and Gemini is not called again.
+databaseRouter.post("/index", async (req, res) => {
+  const request = validateConnectionRequest(req.body);
+  const indexingService = new IndexingService();
+
+  if (await indexingService.indexExists(request)) {
+    const documents = await indexingService.loadIndex(request);
+
+    return res.json(
+      apiResponse(true, "Existing database index loaded", {
+        indexed_tables: documents.length,
+        reused: true,
+      })
+    );
+  }
+
+  const documents = await indexingService.buildIndex(request);
+
+  res.json(
+    apiResponse(true, "Database indexed successfully", {
+      indexed_tables: documents.length,
+      reused: false,
+    })
+  );
+});
